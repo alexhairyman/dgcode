@@ -2,8 +2,6 @@
 import std.stdio;
 import std.json;
 
-void main(){}
-
 version (oldtest)
 {
   void main()
