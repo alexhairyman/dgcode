@@ -1,0 +1,10 @@
+{
+  "name" : "simple l shaped cut, each leg is 5 inches long, and around 1 inch wide",
+  "settings" : {"hoverheight": 1.80, "cutheight" : 1.5,"feedrate" : 36.00},
+  "command" : 
+  [
+    ["hoverto" , {"X" : 0, "Y" : 0}],
+    ["cutto" , {"X" : 5}, {"Y" : 1}, {"X" : 4}, {"Y" : 5}, {"X" : 0}],
+    ["hoverto" , {"X" : 0, "Y" : 0}]
+  ]
+}
