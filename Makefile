@@ -2,7 +2,13 @@
 BDIR=build
 DIRFLAGS=-od$(BDIR)
 DMD=dmd
+DFLAGS ?= -version=testmain
 $(BDIR)/%.o : %.d
-	$(DMD) -c $(DIRFLAGS) $^
+	$(DMD) $(DFLAGS) -c $(DIRFLAGS) $^
+
 parse: $(BDIR)/test.o $(BDIR)/parse.o $(BDIR)/command.o
-	$(DMD) -of$@ $+
+	$(DMD) $(DFLAGS) -of$@ $+
+
+.PHONY: clean
+clean:
+	rm -rf $(BDIR) ./parse
