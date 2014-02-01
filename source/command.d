@@ -34,34 +34,61 @@ struct Coordinate
 public:
   float X;
   float Y;
-  float Z;
+  //float Z;
 
-  static Coordinate dupcoord(ref Coordinate incoord)
+  this(float sx, float sy)
   {
-    Coordinate c;
-    c.X = incoord.X;
-    c.Y = incoord.Y;
-    c.Z = incoord.Z;
-    return c;
+    this.X = sx;
+    this.Y = sy;
   }
 
-  unittest
+  this(float[2] infs) 
   {
-    Coordinate c1, c2;
-
-    mixin( testsay!("coordinate test start"));
-    c1.X = 2; c1.Y = 2; c1.Z = 2;
-    c2 = c1;
-    c2.X = 3; c2.Y = 3; c2.Z = 3;
-    assert(c2.X == 3 && c1.X == 2);
-    assert(c2.Y == 3 && c1.Y == 2);
-    assert(c2.Z == 3 && c1.Z == 2);
-
-    mixin( testsay!("coordinate test end"));
+    this(infs[0], infs[1]);
   }
 
+  @property float[2] tofloats() 
+  {
+    return [this.X,this.Y];
+  }
+
+  alias tofloats this;
+ 
 }
 
+static Coordinate dupcoord(ref Coordinate incoord)
+{
+  Coordinate c;
+  c.X = incoord.X;
+  c.Y = incoord.Y;
+  //c.Z = incoord.Z;
+  return c;
+}
+
+unittest
+{
+  Coordinate c1, c2;
+
+  mixin( testsay!"coordinate test start");
+  c1.X = 2.1f; c1.Y = 2.2f; // c1.Z = 2;
+  c2 = c1;
+  c2.X += 1.0f; c2.Y += 1.0f; // c2.Z = 3;
+
+  mixin(dotest!`text(c1)`);
+  mixin(dotest!`text(c2)`);
+
+  assert(c2.X == 3.1f && c1.X == 2.1f);
+  assert(c2.Y == 3.2f && c1.Y == 2.2f);
+  
+  //int ImplicitFloat(Coordinate inc){return -1;}
+  mixin(testsay!"implicit/explicit cast test");
+  float[2] cf1 = c1;
+  float[2] cf2 = cast(float[2]) c2;
+  mixin(dotest!`cast(float[2]) c2`);
+  
+  //ImplicitFloat([0f,1f]);
+
+}
 
 
 version (commandmain) {
@@ -78,30 +105,60 @@ class DGObject
 {
 private:
   DGType dgtype_;
+  float xbound_, ybound_, zbound_;
 
 public:
-  string GenerateGCode() {return "DO NOT USE DGObject";}
+  string GenerateGCode() {throw new Exception("DGOBJECT CANNOT BE INITIALIZED");}
   @property DGType dgtype() { return this.dgtype_;}
   @property void dgtype(DGType x) {this.dgtype_ = x;}
+
+  @property float xbound() {return this.xbound_;}
+  @property void xbound(float xb) { this.xbound_ = xb;}
+
+  @property float ybound() {return this.ybound_;}
+  @property void ybound(float xb) { this.ybound_ = xb;}
+
+  @property float zbound() {return this.zbound_;}
+  @property void zbound(float xb) { this.zbound_ = xb;}
   
+}
+
+unittest
+{
+  mixin (testsay!("DGObject tests"));
+  DGObject dg1 = new DGObject();
+  assertThrown(dg1.GenerateGCode());
+  writeln("exception thrown when trying to run dg1.GenerateGCode()!");
 }
 
 class Hole : DGObject
 {
 protected:
-  float[2] XY; /// XY coordinates
+  Coordinate holecoord_; /// XY coordinates
+public:
+  this (Coordinate coordset) {this.holecoord_ = coordset;}
 }
 
+/**
+ * A line class
+ * has a from XY coordinate, and a to XY coordinate
+ *
+ */
 class Line : DGObject
 {
 protected:
   Coordinate from_, to_; /// XY from and to
   CutMethod cutmethod_;
 public:
+  
+  this() {}
+  this(float[2] tfrom, float[2] tto) {this.from = tfrom; this.to = tto;}
+  this(float tfromx, float tfromy, float ttox, float ttoy) {this([tfromx,tfromy], [ttox,ttoy]);}
+
   override string GenerateGCode()
   {
     string GCode = null;
-    assert (this.cutmethod == CutMethod.ZIGZAG, "just zig zag for now");
+    assert (this.cutmethod == CutMethod.ZIGZAG, "just zig zag for now"); // not an exception since it will be taken out eventually
     
     return GCode;
   }
@@ -136,14 +193,9 @@ unittest
   l1.toX = 2.1f;
   l1.toY = 2.2f;
   mixin(testsay!("set all the from/to vars"));
-  {
-    writeln("showing data:");
-    // string fromx = text(l1.fromX);
-    // string fromy = text(l1.fromY);
-    // string tox = text(l1.toX);
-    // string toy = text(l1.toY);
-    writeln("from (", l1.fromX, ",", l1.fromY, ") to (",l1.toX, ",", l1.toY, ")"); // holy god is this ugly!
-  }
+  // writeln("showing data:");
+  writeln("from (", l1.fromX, ",", l1.fromY, ") to (",l1.toX, ",", l1.toY, ")"); // holy god is this uglaaaay
+  mixin (dotest!`[l1.fromX,l1.fromY],[l1.toX,l1.toY]`);
   assert(l1.fromX == 1.1f);
   assert(l1.fromY == 1.2f);
   assert(l1.toX == 2.1f);
@@ -151,20 +203,25 @@ unittest
   mixin (testsay!("Variables all set correctly"));
   destroy (l1);
   
-  mixin (testsay!("Testing iffy properties now"));
+  writeln("Testing iffy properties now");
   Line l2 = new Line();
   l2.from = [3.1f, 3.2f];
   l2.to = [4.1f, 4.2f];
 
   assert (l2.from == [3.1f, 3.2f]);
-  writeln(text(l2.from) ~ text(l2.to));
+  mixin( dotest!`l2.from, l2.to`);
+
+  destroy(l2);
+
+  Line l3 = new Line([0.0f,0.0f], [5.0f,5.0f]);
   
     
 }
 
-class Outline : DGObject
+class OutLine : DGObject
 {
 protected:
+  Coordinate[] coordinates_;
   Line[] outlines_;
   CutMethod cut_method_;
   float tool_radius_;
@@ -175,28 +232,60 @@ public:
   @property void offsetside(OffsetSide x) {this.side_to_use_=x;}
   @property OffsetSide  offsetside() {return this.side_to_use_;}
 
-  @property Line[] lines() {return this.outlines_;}
+  version (disable) {@property Line[] lines() {return this.outlines_;}}
 
-  void AddLine (Line toadd)
+  @property Coordinate[] coordinates() {return this.coordinates_;}
+  void AddCoordinate(Coordinate toc)
   {
-    // add some kind of error handling
-    outlines_ ~= toadd;
+    this.coordinates_ ~= toc;
   }
 
-  Line GetLine (int arrindex)
+  void AddCoordinate(Coordinate[] toadd...)
   {
-    Line toreturn = null;
-    if(arrindex < outlines_.length) 
-      toreturn = outlines_[arrindex];
-    else
-      throw new Exception("array index out of bounds");
-    return toreturn;
+    foreach (Coordinate C ; toadd)
+    {
+      this.AddCoordinate(C);
+    }
   }
-
   
+  version(disable)
+  {
+    void AddLine (Line toadd)
+    {
+      outlines_ ~= toadd;
+    }
+  }
 
+  deprecated void AddPoint (Coordinate togoto)
+  {
+    if (coordinates_.length < 1)
+      throw new Exception("NEED AN INITIAL COORDINATE TO START WITH");
+    else
+      this.AddCoordinate(togoto);
+  }
+
+  version(disable)
+  {
+    Line GetLine (int arrindex)
+    {
+      Line toreturn = null;
+      if(arrindex < outlines_.length) 
+	toreturn = outlines_[arrindex];
+      else
+	throw new Exception("array index out of bounds");
+      return toreturn;
+    }
+  }
 }
 
+unittest
+{
+  OutLine lshape = new OutLine();
+  lshape.AddCoordinate(Coordinate(0f,0f));
+  lshape.AddCoordinate(Coordinate([5f,5f]));
+  
+  // lshape.AddLine(new Line([0f, 0f] , [5f,0f]);
+}
 
 
 class Document

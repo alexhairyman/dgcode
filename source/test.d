@@ -4,8 +4,24 @@ import parse;
 
 version(unittest)
 {
-  public import std.stdio, std.conv;
-  template testsay(string say) {const char[] testsay = "writeln (\"Unit test: " ~ say ~ "\");";}
+
+  int x(){return -3;}
+  public import std.stdio, std.conv, std.exception, std.traits;
+  template testsay(string say)
+  {
+    const char[] testsay = "writeln (\"\\n---Unit test: " ~ say ~ " ---\");";
+  }
+
+  template dotest(string tdo)
+  {
+    const char[] dotest = `writeln("    ` ~ tdo ~ `: ", text(` ~ tdo ~ `));`;
+  }
+  
+  unittest
+  {
+    mixin(testsay!"HOLA");
+    mixin(dotest!`x()`);
+  }
 }
 version(testmain) 
 {

@@ -8,7 +8,7 @@ DFLAGS ?= $(BFLAGS)
 OFLAGS ?= $(BFLAGS)
 
 $(BDIR)/%.o : $(SDIR)/%.d
-	$(DMD) $(OFLAGS) -c $(DIRFLAGS) $^
+	$(DMD) $(OFLAGS) -c $(DIRFLAGS) $<
 
 parse: $(BDIR)/test.o $(BDIR)/parse.o $(BDIR)/command.o
 	$(DMD) $(DFLAGS) -of$@ $+
