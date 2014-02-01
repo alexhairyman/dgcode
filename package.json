@@ -1,0 +1,14 @@
+{
+    "name": "dgcode",
+    "targetType": "gcode generator (for CNC machines)",
+    "dependencies": {
+	"mylib:dgcode": "~master",
+    },
+    "subPackages": [
+	{
+	    "name": "dgcode",
+	    "targetType": "library",
+	    "sourcePaths": ["source"]
+	}
+    ]
+}
