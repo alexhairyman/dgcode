@@ -16,3 +16,4 @@ parse: $(BDIR)/test.o $(BDIR)/parse.o $(BDIR)/command.o
 .PHONY: clean
 clean:
 	rm -rf $(BDIR) ./parse *.o
+
