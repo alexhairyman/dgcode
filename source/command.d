@@ -98,8 +98,22 @@ protected:
   Coordinate from_, to_; /// XY from and to
   CutMethod cutmethod_;
 public:
+  override string GenerateGCode()
+  {
+    string GCode = null;
+    assert (this.cutmethod == CutMethod.ZIGZAG, "just zig zag for now");
+    
+    return GCode;
+  }
+
   @property CutMethod cutmethod() {return this.cutmethod_;}
   @property void cutmethod(CutMethod x) {this.cutmethod_ = x;}
+
+  @property void from(float[2] froms) {this.from_.X=froms[0];this.from_.Y=froms[1];}
+  @property float[2] from() {return cast(float[2])[this.from_.X, this.from_.Y];}
+
+  @property void to(float[2] tos) {this.to_.X=tos[0];this.to_.Y=tos[1];}
+  @property float[2] to() {return cast(float[2])[this.to_.X, this.to_.Y];}
 
   @property void fromX(float x) {this.from_.X = x;}
   @property float fromX() {return this.from_.X;}
@@ -121,13 +135,30 @@ unittest
   l1.fromY = 1.2f;
   l1.toX = 2.1f;
   l1.toY = 2.2f;
-  mixin(testsay!("set all the variables"));
-
+  mixin(testsay!("set all the from/to vars"));
+  {
+    writeln("showing data:");
+    // string fromx = text(l1.fromX);
+    // string fromy = text(l1.fromY);
+    // string tox = text(l1.toX);
+    // string toy = text(l1.toY);
+    writeln("from (", l1.fromX, ",", l1.fromY, ") to (",l1.toX, ",", l1.toY, ")"); // holy god is this ugly!
+  }
   assert(l1.fromX == 1.1f);
   assert(l1.fromY == 1.2f);
   assert(l1.toX == 2.1f);
   assert(l1.toY == 2.2f);
   mixin (testsay!("Variables all set correctly"));
+  destroy (l1);
+  
+  mixin (testsay!("Testing iffy properties now"));
+  Line l2 = new Line();
+  l2.from = [3.1f, 3.2f];
+  l2.to = [4.1f, 4.2f];
+
+  assert (l2.from == [3.1f, 3.2f]);
+  writeln(text(l2.from) ~ text(l2.to));
+  
     
 }
 

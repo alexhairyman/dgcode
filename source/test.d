@@ -4,7 +4,7 @@ import parse;
 
 version(unittest)
 {
-  public import std.stdio;
+  public import std.stdio, std.conv;
   template testsay(string say) {const char[] testsay = "writeln (\"Unit test: " ~ say ~ "\");";}
 }
 version(testmain) 

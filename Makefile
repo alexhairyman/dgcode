@@ -3,8 +3,8 @@ BDIR=build
 DIRFLAGS=-od$(BDIR)
 DMD=dmd
 SDIR = source
-BFLAGS = -I$(SDIR)
-DFLAGS ?= $(BFLAGS) -version=testmaina
+BFLAGS = -I$(SDIR) $(BOFLAGS)
+DFLAGS ?= $(BFLAGS)
 OFLAGS ?= $(BFLAGS)
 
 $(BDIR)/%.o : $(SDIR)/%.d
@@ -15,4 +15,4 @@ parse: $(BDIR)/test.o $(BDIR)/parse.o $(BDIR)/command.o
 
 .PHONY: clean
 clean:
-	rm -rf $(BDIR) ./parse
+	rm -rf $(BDIR) ./parse *.o
