@@ -29,13 +29,54 @@ enum OffsetSide
   RIGHT
 }
 
-enum GCodeLetterType : string
+enum _GCodeLetterType
 {
-  FEEDRATE = "F",
-  XCOORD = "X",
-  YCOORD = "Y",
-  ZCOORD = "Z",
-  RADIUS = "P"
+  FEEDRATE,
+  XCOORD,
+  YCOORD,
+  ZCOORD,
+  RADIUS
+}
+///$(RED for monodevelop, remove eventually)
+alias _GCodeLetterType GCodeLetterType;
+
+enum _GCodeCommandType
+{
+  RAPID,
+  FEED,
+  OFFSET_RIGHT,
+  OFFSET_LEFT
+}
+/// ditto
+alias _GCodeCommandType GCodeCommandType;
+
+/// currently only used for the float
+union ValType
+{
+  int i;
+  float f;
+}
+
+/// A single argument
+/// LIKE THIS: X3.44 Y0.55 Z2 F60.0
+class GCodeArgument
+{
+private:
+  ValType holdval_;
+  GCodeLetterType gclt_;
+    
+public:
+  this(ValType vtin, GCodeLetterType gcltin)
+  {
+  
+  }
+}
+
+class GCodeCommand{}
+
+class GCodeGenerator
+{
+  
 
 }
 
