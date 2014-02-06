@@ -29,6 +29,16 @@ enum OffsetSide
   RIGHT
 }
 
+enum GCodeLetterType : string
+{
+  FEEDRATE = "F",
+  XCOORD = "X",
+  YCOORD = "Y",
+  ZCOORD = "Z",
+  RADIUS = "P"
+
+}
+
 struct Coordinate
 {
 public:
