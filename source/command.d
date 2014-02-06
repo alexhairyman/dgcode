@@ -29,7 +29,7 @@ enum OffsetSide
   RIGHT
 }
 
-enum _GCodeLetterType
+enum GCodeLetterType
 {
   FEEDRATE,
   XCOORD,
@@ -38,9 +38,9 @@ enum _GCodeLetterType
   RADIUS
 }
 ///$(RED for monodevelop, remove eventually)
-alias _GCodeLetterType GCodeLetterType;
+//alias GCodeLetterType GCodeLetterType;
 
-enum _GCodeCommandType
+enum GCodeCommandType
 {
   RAPID,
   FEED,
@@ -48,7 +48,7 @@ enum _GCodeCommandType
   OFFSET_LEFT
 }
 /// ditto
-alias _GCodeCommandType GCodeCommandType;
+//alias GCodeCommandType GCodeCommandType;
 
 /// currently only used for the float
 union ValType
@@ -66,13 +66,35 @@ private:
   GCodeLetterType gclt_;
     
 public:
-  this(ValType vtin, GCodeLetterType gcltin)
+  this(GCodeLetterType gcltin, ValType vtin)
   {
+    this.holdval_ = vtin;
+    this.gclt_ = gcltin;
+  }
   
+  static GCodeArgument make(GCodeLetterType gcltin, ValType vtin)
+  {
+    GCodeArgument gcat = new GCodeArgument(gcltin, vtin);
+    return gcat;
   }
 }
 
-class GCodeCommand{}
+class GCodeCommand
+{
+private:
+  static string[GCodeCommandType] GCode;
+  GCodeCommandType comtype_;
+  GCodeArgument[] arguments_;
+  
+public:
+  string GenerateGCode()
+  {
+    string tstring;
+    
+    return tstring;
+  }
+  
+}
 
 class GCodeGenerator
 {
