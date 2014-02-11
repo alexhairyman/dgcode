@@ -1,3 +1,6 @@
+module command;
+import std.conv;
+
 version(unittest)
 {
   import test;
@@ -29,6 +32,7 @@ enum OffsetSide
   RIGHT
 }
 
+/// GCodeLetterType what kinda letter is it?
 enum GCodeLetterType
 {
   FEEDRATE,
@@ -37,9 +41,8 @@ enum GCodeLetterType
   ZCOORD,
   RADIUS
 }
-///$(RED for monodevelop, remove eventually)
-//alias GCodeLetterType GCodeLetterType;
 
+/// GCodeCommandType what kinda command is it?
 enum GCodeCommandType
 {
   RAPID,
@@ -47,8 +50,7 @@ enum GCodeCommandType
   OFFSET_RIGHT,
   OFFSET_LEFT
 }
-/// ditto
-//alias GCodeCommandType GCodeCommandType;
+
 
 /// currently only used for the float
 union ValType
@@ -62,38 +64,145 @@ union ValType
 class GCodeArgument
 {
 private:
-  ValType holdval_;
+  static string[GCodeLetterType] lcodes_;
+  float holdval_;
   GCodeLetterType gclt_;
     
 public:
-  this(GCodeLetterType gcltin, ValType vtin)
+  
+  static this()
+  {
+    GCodeArgument.lcodes_ = [
+      GCodeLetterType.FEEDRATE : "F",
+      GCodeLetterType.RADIUS : "P",
+      GCodeLetterType.XCOORD : "X",
+      GCodeLetterType.YCOORD : "Y",
+      GCodeLetterType.ZCOORD : "Z"
+    ];
+  }
+  
+  void Set(GCodeLetterType gcltin, float vtin)
   {
     this.holdval_ = vtin;
     this.gclt_ = gcltin;
   }
   
-  static GCodeArgument make(GCodeLetterType gcltin, ValType vtin)
+  this(GCodeLetterType gcltin, float vtin)
+  {
+    this.holdval_ = vtin;
+    this.gclt_ = gcltin;
+  }
+  static GCodeArgument make(GCodeLetterType gcltin, float vtin)
   {
     GCodeArgument gcat = new GCodeArgument(gcltin, vtin);
     return gcat;
   }
+  
+  string GenerateGCode()
+  {
+    string tstr;
+    tstr ~= this.lcodes_[this.gclt_];
+    tstr ~= text(this.holdval_);
+    return tstr;
+  }
+}
+
+unittest
+{
+  mixin(test.testsay!`Doing GCodeArgument tests`);
+  GCodeArgument gca1 = GCodeArgument.make(GCodeLetterType.XCOORD, 0f);
+  mixin(test.dotest!(`gca1.GenerateGCode() == "X0"`));
+  GCodeArgument gca2 = GCodeArgument.make(GCodeLetterType.YCOORD, 0.33f);
+  mixin(test.dotest!`gca2.GenerateGCode() == "Y0.33"`);
+  
 }
 
 class GCodeCommand
 {
 private:
-  static string[GCodeCommandType] GCode;
+  static string[GCodeCommandType] gcodes_;
   GCodeCommandType comtype_;
-  GCodeArgument[] arguments_;
+  
+  /// each GCodeArgument[] is a new line of arguments
+  GCodeArgument[][] arguments_;
   
 public:
+
+  static this()
+  {
+    GCodeCommand.gcodes_ = [
+      GCodeCommandType.RAPID : "G00",
+      GCodeCommandType.FEED : "G01",
+      GCodeCommandType.OFFSET_RIGHT : "G42",
+      GCodeCommandType.OFFSET_LEFT : "G41"
+    ];
+    
+  }
+  
+  @property GCodeArgument[][] args() {return this.arguments_;}
+  @property GCodeCommandType command() {return this.comtype_;}
+  @property void command(GCodeCommandType gcin) {this.comtype_ = gcin;}
+  
+  void AddArgument(GCodeArgument gcain)
+  {
+    this.arguments_ ~= [gcain];
+  }
+  
+  void AddArgument(GCodeArgument[] gcains)
+  {
+    this.arguments_ ~= gcains;
+  }
+  
+  /// Generate the GCode for this command + arguments
   string GenerateGCode()
   {
     string tstring;
+    tstring ~= this.gcodes_[this.command];
+    
+    foreach(GCodeArgument[] gca ; this.arguments_)
+    {
+      string dstr;
+      dstr ~= " ";
+      for (int i = 0; i < gca.length ; i++)
+      {
+        string dstr2;
+        dstr2 = gca[i].GenerateGCode();
+        if (i == gca.length-1) {dstr ~= dstr2 ~ "\n";} else {dstr ~= dstr2 ~ " ";}
+      }
+      //dstr = dstr[1..$-1] ~ '\n';
+      tstring ~= dstr;
+    }
     
     return tstring;
   }
   
+}
+
+unittest
+{
+  mixin(test.testsay!"GCodeArgument GCodeCommand tests");
+  GCodeCommand gcc = new GCodeCommand();
+  gcc.command = GCodeCommandType.RAPID;
+  mixin(test.dotest!"gcc.command");
+  mixin(test.wtest!("changed gcc.command to GCodeCommandType.FEED!"));
+  gcc.command = GCodeCommandType.FEED;
+  mixin(test.dotest!"gcc.command");
+  alias GCodeArgument.make gmk;
+  alias GCodeLetterType lt;
+  gcc.AddArgument([gmk(lt.ZCOORD, 0.0f), gmk(lt.FEEDRATE, 20f)]);
+  gcc.AddArgument(gmk(lt.XCOORD, 2.5f));
+  gcc.AddArgument(gmk(lt.YCOORD, 2.5f));
+  gcc.AddArgument([gmk(lt.XCOORD, 5f), gmk(lt.YCOORD, 5f)]);
+  foreach(GCodeArgument[] g2; gcc.args)
+  {
+    mixin(test.wtest!("Line:"));
+    foreach(GCodeArgument g; g2)
+    {  
+      mixin(test.dotest!(`g.GenerateGCode()`));
+    }
+  }
+  mixin(test.testsay!("generating all gcode"));
+  mixin(test.dotest!(`gcc.GenerateGCode()`, true));
 }
 
 class GCodeGenerator

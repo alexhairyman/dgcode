@@ -1,5 +1,6 @@
-import command;
-import parse;
+//import command;
+//import parse;
+module test;
 //import std.stdio;
 
 version(unittest)
@@ -9,12 +10,39 @@ version(unittest)
   public import std.stdio, std.conv, std.exception, std.traits;
   template testsay(string say)
   {
-    const char[] testsay = "writeln (\"\\n---Unit test: " ~ say ~ " ---\");";
+    const char[] testsay = `writeln (q"<---Unit test: ` ~ say ~ ` --->");`;
   }
 
-  template dotest(string tdo)
+//  template dotest_(string tdo, bool newline=false)
+//  {
+//    static char[] yup()
+//    {
+//      const char[] dotest;
+//      if(newline == true){
+//        dotest = `writeln(q"<    ` ~ tdo ~ `: >","\n", text(` ~ tdo ~ `));`;}
+//      else{
+//        dotest = `writeln(q"<    ` ~ tdo ~ `: >", text(` ~ tdo ~ `));`;}
+//      return dotest;
+//    }
+//  }
+  string dotest_(string tdo, bool newline=false)
   {
-    const char[] dotest = `writeln("    ` ~ tdo ~ `: ", text(` ~ tdo ~ `));`;
+    string dotest;
+    if(newline == true)
+      dotest = `writeln(q"<    ` ~ tdo ~ `: >","\n", text(` ~ tdo ~ `));`;
+    else
+      dotest = `writeln(q"<    ` ~ tdo ~ `: >", text(` ~ tdo ~ `));`;
+    
+    return dotest;
+  }
+  template dotest(string tdo, bool newline=false)
+  {
+    const char[] dotest = dotest_(tdo,newline);
+  }
+  
+  template wtest(string tdo)
+  {
+    const char[] wtest = `writeln("  ` ~ tdo ~ `");`;
   }
   
   unittest
