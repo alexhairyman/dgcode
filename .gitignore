@@ -2,3 +2,4 @@ parse
 build/
 *.o
 *.userprefs
+docs/

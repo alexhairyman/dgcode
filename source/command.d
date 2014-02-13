@@ -1,19 +1,19 @@
 module command;
 import std.conv;
-
 version(unittest)
 {
   import test;
 }
 
-package const char[] gmxn = `alias GCodeArgument _gca;`;
-enum CommandType
+deprecated package const char[] gmxn = `alias GCodeArgument _gca;`;
+deprecated enum CommandType
 {
   HOVERTO,
   CUTTO,
   DRILLHOLE
 }
 
+/// the Type of object
 enum DGType
 {
   HOLE,
@@ -21,6 +21,8 @@ enum DGType
   OUTLINE  
 }
 
+/// the method for cutting  
+/// $(RED only use layer for now)
 enum CutMethod
 {
   LIGHTNING,
@@ -28,7 +30,8 @@ enum CutMethod
   LAYER
 }
 
-enum OffsetSide
+/// lolnope, not used right now
+deprecated enum OffsetSide
 {
   LEFT,
   RIGHT
@@ -83,23 +86,26 @@ public:
     ];
   }
   
+  /// set the letter type and the float value
   void Set(GCodeLetterType gcltin, float vtin)
   {
     this.holdval_ = vtin;
     this.gclt_ = gcltin;
   }
   
+  /// initialize this GCodeArgument with initial values
   this(GCodeLetterType gcltin, float vtin)
   {
-    this.holdval_ = vtin;
-    this.gclt_ = gcltin;
+    this.Set(gcltin, vtin);
   }
+  
+  /// helper function to generate a GCodeArgument
   static GCodeArgument make(GCodeLetterType gcltin, float vtin)
   {
     GCodeArgument gcat = new GCodeArgument(gcltin, vtin);
     return gcat;
   }
-  
+  /// Generate the GCode and return it
   string GenerateGCode()
   {
     string tstr;
@@ -119,6 +125,10 @@ unittest
   
 }
 
+/// A GCodeCommand
+/// contains the command type, and also a multi dimensional array of GCodeArguments, an array of arrays,
+/// with each array being another line to be added to the array
+
 class GCodeCommand
 {
 private:
@@ -129,7 +139,7 @@ private:
   GCodeArgument[][] arguments_;
   
 public:
-
+  /// initializes the array of command types
   static this()
   {
     GCodeCommand.gcodes_ = [
@@ -140,16 +150,21 @@ public:
     ];
     
   }
-  
+  /// return the array of arrays of arguments
   @property GCodeArgument[][] args() {return this.arguments_;}
+  /// return the command type
   @property GCodeCommandType command() {return this.comtype_;}
+  /// set the command type
   @property void command(GCodeCommandType gcin) {this.comtype_ = gcin;}
   
+  /// add a single argument, creates an array literal with the argument input
+  /// and calls the real ($D_CODE AddArgument)
   void AddArgument(GCodeArgument gcain)
   {
-    this.arguments_ ~= [gcain];
+    this.AddArgument([gcain]);
   }
   
+  /// adds a new array to the array of arrays
   void AddArgument(GCodeArgument[] gcains)
   {
     this.arguments_ ~= gcains;
@@ -207,34 +222,41 @@ unittest
   mixin(test.dotest!(`gcc.GenerateGCode()`, true));
 }
 
+/// Just an X/Y coordinate
 struct Coordinate
 {
 public:
+  /// X value
   float X;
+  /// Y value
   float Y;
   //float Z;
 
+  /// construct from 2 floats
   this(float sx, float sy)
   {
     this.X = sx;
     this.Y = sy;
   }
 
+  /// construct from float[2]
   this(float[2] infs) 
   {
     this(infs[0], infs[1]);
   }
 
+  /// implicitly convert to float[2]
   @property float[2] tofloats() 
   {
     return [this.X,this.Y];
   }
-
+  /// ditto
   alias tofloats this;
  
 }
 
-static Coordinate dupcoord(ref Coordinate incoord)
+/// useless, Do Not Use
+deprecated static Coordinate dupcoord(ref Coordinate incoord)
 {
   Coordinate c;
   c.X = incoord.X;
@@ -279,6 +301,7 @@ version (commandmain) {
   }
 }
 
+/// A DGcode Object
 class DGObject
 {
 private:
@@ -309,17 +332,29 @@ unittest
   writeln("exception thrown when trying to run dg1.GenerateGCode()!");
 }
 
+/// A hole
+///
+/// goes to the point, and drills down... simple
+
 class Hole : DGObject
 {
 protected:
   Coordinate holecoord_; /// XY coordinates
   float feedrate_;
 public:
+
+  /// build with a specific coordinate in mind
+  ///
+  /// $(RED the feedrate is set to 30, I need to implement the standard way of generating this)
   this (Coordinate coordset, float feedrate = 30f) 
   {
     this.holecoord_ = coordset;
     this.feedrate_ = feedrate;
   }
+  /// Generate GCode... duh
+  ///
+  /// WARNING:
+  /// Not ready yet
   override string GenerateGCode()
   {
     alias GCodeArgument gca;
@@ -332,6 +367,9 @@ public:
   }
 }
 
+/// Just a line
+///
+/// $(RED MIGHT GET TAKEN OUT)
 class Line : DGObject
 {
 protected:
@@ -343,10 +381,12 @@ public:
   this(float[2] tfrom, float[2] tto) {this.from = tfrom; this.to = tto;}
   this(float tfromx, float tfromy, float ttox, float ttoy) {this([tfromx,tfromy], [ttox,ttoy]);}
 
+  /// Generate GCode
+  /// WARNING: NOT READY YET
   override string GenerateGCode()
   {
     string GCode = null;
-    assert (this.cutmethod == CutMethod.ZIGZAG, "just zig zag for now"); // not an exception since it will be taken out eventually
+    assert (this.cutmethod == CutMethod.LAYER, "JUST LAYER NOW");
     
     return GCode;
   }
@@ -406,6 +446,7 @@ unittest
     
 }
 
+/// contains a series of points
 class OutLine : DGObject
 {
 protected:
@@ -414,36 +455,43 @@ protected:
   CutMethod cut_method_;
   float tool_radius_;
   bool use_offset_;
-  OffsetSide side_to_use_;
+  deprecated OffsetSide side_to_use_;
 
 public:
-  @property void offsetside(OffsetSide x) {this.side_to_use_=x;}
-  @property OffsetSide  offsetside() {return this.side_to_use_;}
+
+  deprecated @property void offsetside(OffsetSide x) {this.side_to_use_=x;}
+  deprecated @property OffsetSide  offsetside() {return this.side_to_use_;}
 
   version (disable) {@property Line[] lines() {return this.outlines_;}}
-
+  
+  /// return the coordinates
   @property Coordinate[] coordinates() {return this.coordinates_;}
+  
+  /// add a single coordinate
   void AddCoordinate(Coordinate toc)
   {
     this.coordinates_ ~= toc;
   }
 
-  void AddCoordinate(Coordinate[] toadd...)
+  /// multiple coordinates
+  ///
+  /// calls original AddCoordinate foreach Coordinate in toadd
+  void AddCoordinates(Coordinate[] toadd...)
   {
     foreach (Coordinate C ; toadd)
     {
       this.AddCoordinate(C);
     }
   }
+  alias AddCoordinates AddCoordinate; /// $(RED ERMMMM USE?)
   
-  version(disable)
+  /// $(RED dun broke)
+  deprecated void AddLine (Line toadd)
   {
-    void AddLine (Line toadd)
-    {
-      outlines_ ~= toadd;
-    }
+    outlines_ ~= toadd;
   }
-
+  
+  /// ditto
   deprecated void AddPoint (Coordinate togoto)
   {
     if (coordinates_.length < 1)
@@ -451,18 +499,16 @@ public:
     else
       this.AddCoordinate(togoto);
   }
-
-  version(disable)
+  
+  /// ditto
+  deprecated Line GetLine (int arrindex)
   {
-    Line GetLine (int arrindex)
-    {
-      Line toreturn = null;
-      if(arrindex < outlines_.length) 
-	toreturn = outlines_[arrindex];
-      else
-	throw new Exception("array index out of bounds");
-      return toreturn;
-    }
+    Line toreturn = null;
+    if(arrindex < outlines_.length) 
+      toreturn = outlines_[arrindex];
+    else
+      throw new Exception("array index out of bounds");
+    return toreturn;
   }
 }
 
@@ -475,7 +521,7 @@ unittest
   // lshape.AddLine(new Line([0f, 0f] , [5f,0f]);
 }
 
-
+/// holds a whole lotta(' shakin going on) DGObjects
 class Document
 {
 private:
@@ -484,7 +530,15 @@ private:
     
 }
 
-abstract class _Command
+/// $(RED $(B $(U $(I $(BIG DEPRECATED))))) $(BR)
+/// Yeah no
+///
+/// All of these are deprecated
+///
+/// BUGS:
+/// Just don't use okay
+///
+deprecated abstract class _Command
 {
 protected:
   string command_;
@@ -502,12 +556,15 @@ public:
   }
 }
 
-class Command : _Command {}
+/// ditto
+deprecated class Command : _Command {}
 
-class CutTo : Command
+/// ditto
+deprecated class CutTo : Command
 {}
 
-class CommandSet
+/// ditto
+deprecated class CommandSet
 {
   private Command[] commands;
   void AddCommand(ref Command commandin)
@@ -516,7 +573,8 @@ class CommandSet
   }
 }
 
-class GCodeObject
+/// ditto
+deprecated class GCodeObject
 {
   private CommandSet command_set;
 }
