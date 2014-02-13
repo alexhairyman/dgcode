@@ -5,6 +5,8 @@ version(unittest)
 {
   import test;
 }
+
+package const char[] gmxn = `alias GCodeArgument _gca;`;
 enum CommandType
 {
   HOVERTO,
@@ -205,12 +207,6 @@ unittest
   mixin(test.dotest!(`gcc.GenerateGCode()`, true));
 }
 
-class GCodeGenerator
-{
-  
-
-}
-
 struct Coordinate
 {
 public:
@@ -317,15 +313,25 @@ class Hole : DGObject
 {
 protected:
   Coordinate holecoord_; /// XY coordinates
+  float feedrate_;
 public:
-  this (Coordinate coordset) {this.holecoord_ = coordset;}
+  this (Coordinate coordset, float feedrate = 30f) 
+  {
+    this.holecoord_ = coordset;
+    this.feedrate_ = feedrate;
+  }
+  override string GenerateGCode()
+  {
+    alias GCodeArgument gca;
+    alias GCodeLetterType gclt;
+    string gcode;
+    
+    GCodeCommand gcc = new GCodeCommand;
+    
+    return gcode;
+  }
 }
 
-/**
- * A line class
- * has a from XY coordinate, and a to XY coordinate
- *
- */
 class Line : DGObject
 {
 protected:
