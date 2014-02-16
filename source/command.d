@@ -5,6 +5,17 @@ version(unittest)
   import test;
 }
 
+/// $(RED this is bad mkay)
+package float defhoverheight = 0.2f;
+
+enum GCODE = 0x01;
+
+package {
+  alias GCodeArgument _gca;
+  alias GCodeLetterType _gclt;
+  alias GCodeCommandType _gcct;
+}
+
 deprecated package const char[] gmxn = `alias GCodeArgument _gca;`;
 deprecated enum CommandType
 {
@@ -313,6 +324,7 @@ public:
   @property DGType dgtype() { return this.dgtype_;}
   @property void dgtype(DGType x) {this.dgtype_ = x;}
 
+deprecated:
   @property float xbound() {return this.xbound_;}
   @property void xbound(float xb) { this.xbound_ = xb;}
 
@@ -352,16 +364,20 @@ public:
     this.feedrate_ = feedrate;
   }
   /// Generate GCode... duh
+  /// First go up to hover height, move to point and then drop and cut, raise back up to cut height
   ///
   /// WARNING:
   /// Not ready yet
+  ///
   override string GenerateGCode()
   {
-    alias GCodeArgument gca;
-    alias GCodeLetterType gclt;
     string gcode;
-    
-    GCodeCommand gcc = new GCodeCommand;
+    GCodeCommand[] commands;
+    commands ~= new GCodeCommand();
+    commands[0].command = _gcct.RAPID;
+    commands[0].AddArgument(_gca.make(_gclt.ZCOORD, defhoverheight));
+    commands[0].AddArgument([_gca.make(_gclt.XCOORD, this.holecoord_.X), _gca.make(_gclt.YCOORD,
+      this.holecoord_.Y)]);
     
     return gcode;
   }

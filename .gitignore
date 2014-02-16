@@ -3,3 +3,4 @@ build/
 *.o
 *.userprefs
 docs/
+trace*
