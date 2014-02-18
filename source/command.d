@@ -1,16 +1,24 @@
 module command;
 import std.conv;
+
 version(unittest)
 {
   import test;
 }
 
-/// $(RED this is bad mkay)
-package float defhoverheight = 0.2f;
+version(noconfig) {enum NOCONFIG =  true;}
+else              {enum NOCONFIG =  false;}
+
+static if(!NOCONFIG) 
+{
+  package enum float defhoverheight = 0.2f; /// $(RED this is bad mkay)
+  package enum float defcutheight = 0.81f; /// $(RED this is bad mkay)
+}
 
 enum GCODE = 0x01;
 
-package {
+package 
+{
   alias GCodeArgument _gca;
   alias GCodeLetterType _gclt;
   alias GCodeCommandType _gcct;
@@ -67,7 +75,6 @@ enum GCodeCommandType
   OFFSET_LEFT
 }
 
-
 /// currently only used for the float
 union ValType
 {
@@ -104,18 +111,16 @@ public:
     this.gclt_ = gcltin;
   }
   
+  static typeof(this) make(GCodeLetterType gcltin, float vtin)
+  {
+    return gmake(gcltin, vtin);
+  }
   /// initialize this GCodeArgument with initial values
   this(GCodeLetterType gcltin, float vtin)
   {
     this.Set(gcltin, vtin);
   }
   
-  /// helper function to generate a GCodeArgument
-  static GCodeArgument make(GCodeLetterType gcltin, float vtin)
-  {
-    GCodeArgument gcat = new GCodeArgument(gcltin, vtin);
-    return gcat;
-  }
   /// Generate the GCode and return it
   string GenerateGCode()
   {
@@ -124,6 +129,13 @@ public:
     tstr ~= text(this.holdval_);
     return tstr;
   }
+}
+
+/// helper function to generate a GCodeArgument
+static GCodeArgument gmake(GCodeLetterType gcltin, float vtin)
+{
+  GCodeArgument gcat = new GCodeArgument(gcltin, vtin);
+  return gcat;
 }
 
 unittest
@@ -159,8 +171,16 @@ public:
       GCodeCommandType.OFFSET_RIGHT : "G42",
       GCodeCommandType.OFFSET_LEFT : "G41"
     ];
-    
   }
+  
+  /// empty constructor
+  this(){}
+  /// create a GCodeCommand with everything already set up
+  this(GCodeArgument[][] argsin, GCodeCommandType comin)
+  {
+    this.arguments_ = argsin.dup;
+  }
+  
   /// return the array of arrays of arguments
   @property GCodeArgument[][] args() {return this.arguments_;}
   /// return the command type
@@ -203,7 +223,6 @@ public:
     
     return tstring;
   }
-  
 }
 
 unittest
@@ -231,6 +250,14 @@ unittest
   }
   mixin(test.testsay!("generating all gcode"));
   mixin(test.dotest!(`gcc.GenerateGCode()`, true));
+  
+  mixin(test.wtest!`creating a GCodeCommand with constructor`);
+  GCodeCommand gcc2 = new GCodeCommand([
+    [gmake(_gclt.XCOORD, 3f), gmake(_gclt.YCOORD, 4f)],
+    [gmake(_gclt.ZCOORD, defcutheight)]
+  ], _gcct.FEED);
+  
+  mixin(test.dotest_("gcc2.GenerateGCode()"));
 }
 
 /// Just an X/Y coordinate
@@ -317,7 +344,7 @@ class DGObject
 {
 private:
   DGType dgtype_;
-  float xbound_, ybound_, zbound_;
+  deprecated float xbound_, ybound_, zbound_;
 
 public:
   string GenerateGCode() {throw new Exception("DGOBJECT CANNOT BE INITIALIZED");}
@@ -355,6 +382,8 @@ protected:
   float feedrate_;
 public:
 
+  /// empty constructor
+  this(){};
   /// build with a specific coordinate in mind
   ///
   /// $(RED the feedrate is set to 30, I need to implement the standard way of generating this)
@@ -363,26 +392,67 @@ public:
     this.holecoord_ = coordset;
     this.feedrate_ = feedrate;
   }
+  
+  /// set the variables, as straightforward as it sounds
+  void Set(Coordinate coordset, float feedrate = 30f)
+  {
+    this.holecoord_ = coordset;
+    this.feedrate_ = feedrate;
+  }
   /// Generate GCode... duh
   /// First go up to hover height, move to point and then drop and cut, raise back up to cut height
   ///
   /// WARNING:
-  /// Not ready yet
+  /// tentatively ready
   ///
   override string GenerateGCode()
   {
     string gcode;
-    GCodeCommand[] commands;
-    commands ~= new GCodeCommand();
+    GCodeCommand[3] commands;
+    commands[0] = new GCodeCommand();
     commands[0].command = _gcct.RAPID;
     commands[0].AddArgument(_gca.make(_gclt.ZCOORD, defhoverheight));
     commands[0].AddArgument([_gca.make(_gclt.XCOORD, this.holecoord_.X), _gca.make(_gclt.YCOORD,
       this.holecoord_.Y)]);
     
+    commands[1] = new GCodeCommand();
+    commands[1].command = _gcct.FEED;
+    commands[1].AddArgument(_gca.make(_gclt.FEEDRATE, this.feedrate_));
+    commands[1].AddArgument(_gca.make(_gclt.ZCOORD, defcutheight));
+    
+    commands[2] = new GCodeCommand();
+    commands[2].command = _gcct.RAPID;
+    commands[2].AddArgument(_gca.make(_gclt.ZCOORD, defhoverheight));
+    
+    // I didn't think it would work that quickly
+    foreach(GCodeCommand tgcc_; commands)
+    {
+      gcode ~= tgcc_.GenerateGCode();
+    }
+    
+    scope(exit)
+    {
+      for(ushort i = 0; i < commands.length; i++)
+      {
+        destroy(commands[i]);
+      }
+    }
     return gcode;
   }
 }
 
+unittest
+{
+  mixin(test.testsay!"Hole test");
+  
+  Hole h1 = new Hole();
+  scope(exit) destroy(h1);
+  
+  h1.Set(Coordinate(3f, 4.5f));
+  
+  mixin(test.dotest!`h1.GenerateGCode()`);
+  
+}
 /// Just a line
 ///
 /// $(RED MIGHT GET TAKEN OUT)
@@ -467,9 +537,10 @@ class OutLine : DGObject
 {
 protected:
   Coordinate[] coordinates_;
-  Line[] outlines_;
+  deprecated Line[] outlines_;
   CutMethod cut_method_;
   float tool_radius_;
+  version(nonconfig) {int ds = 3;}
   bool use_offset_;
   deprecated OffsetSide side_to_use_;
 
@@ -492,14 +563,42 @@ public:
   /// multiple coordinates
   ///
   /// calls original AddCoordinate foreach Coordinate in toadd
-  void AddCoordinates(Coordinate[] toadd...)
+  void AddCoordinate(Coordinate[] toadd...)
   {
     foreach (Coordinate C ; toadd)
     {
       this.AddCoordinate(C);
     }
   }
-  alias AddCoordinates AddCoordinate; /// $(RED ERMMMM USE?)
+  //alias AddCoordinates AddCoordinate; /// $(RED ERMMMM USE?)
+  
+  /// This is really logic heavy, mind you
+  override string GenerateGCode()
+  {
+    string gcode;
+    
+    if(this.cut_method_ == CutMethod.LAYER)
+    {
+      GCodeCommand[] tgcoms;
+      for(uint ti = 0; ti < this.coordinates_.length; ti++)
+      {
+        if(ti == 0)
+        {
+          tgcoms ~= new GCodeCommand([
+            [gmake(_gclt.ZCOORD, defhoverheight)],
+            [gmake(_gclt.XCOORD, this.coordinates_[ti].X), gmake(_gclt.YCOORD, this.coordinates_[ti].Y)]], _gcct.RAPID);
+        }
+        else
+        {
+//          tgcoms ~= GCodeCommand([
+//            [gmake(_gclt
+        }
+      }
+    
+    }
+    
+    return gcode;
+  }
   
   /// $(RED dun broke)
   deprecated void AddLine (Line toadd)

@@ -3,5 +3,4 @@
     "targetType" : "executable",
     "targetName" : "parse",
     "targetPath" : "build"
-
 }

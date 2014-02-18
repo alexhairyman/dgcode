@@ -25,7 +25,7 @@ version(unittest)
 //      return dotest;
 //    }
 //  }
-  string dotest_(string tdo, bool newline=false)
+  string dotest_(string tdo, bool newline=true)
   {
     string dotest;
     if(newline == true)
@@ -35,7 +35,7 @@ version(unittest)
     
     return dotest;
   }
-  template dotest(string tdo, bool newline=false)
+  template dotest(string tdo, bool newline=true)
   {
     const char[] dotest = dotest_(tdo,newline);
   }
