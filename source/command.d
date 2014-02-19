@@ -6,16 +6,17 @@ version(unittest)
   import test;
   import std.stdio;
   public enum usedebug = 1;
-  debug = 2;
+//  debug = 2;
 }
 
-debug(1) import std.stdio;
-
+debug import std.stdio;
+debug import test;
+debug debug = 1;
 unittest
 {  
   writeln("unittests enabled");
   string dbgstring;
-  debug(2) dbgstring = "debug enabled";
+  debug dbgstring = "debug enabled";
   writeln(dbgstring);
 }
 
@@ -614,31 +615,29 @@ public:
     if(this.cut_method_ == CutMethod.LAYER)
     {
       GCodeCommand[] tgcoms;
-      debug(2) mixin(test.dotest!`this.coordinates_.length`);
-      debug(2) mixin(test.dotest!`this.cutlayers_.length`);
-      for(ubyte li = 0; li < this.cutlayers_.length; li++)
+      debug mixin(test.dotest!`this.coordinates_.length`);
+      debug mixin(test.dotest!`this.cutlayers_.length`);
+      for(ubyte lyr = 0; lyr < this.cutlayers_.length; lyr++)
       {
-        float clayer = this.cutlayers_[li];
-        for(uint ti = 0; ti < this.coordinates_.length; ti++)
+        float clayer = this.cutlayers_[lyr];
+        for(uint crd = 0; crd < this.coordinates_.length; crd++)
         {
-          debug(3) mixin(test.dotest!(`li`, false));
-          debug(3) mixin(test.dotest!(`ti`, false));
-          if(ti == 0)
+          debug(2) mixin(test.dotest!(`lyr`, false));
+          debug(2) mixin(test.dotest!(`crd`, false));
+          if(crd == 0)
           {
-            debug(3) mixin(test.wtest!`0`);
+            debug(2) mixin(test.wtest!`0`);
             tgcoms ~= new GCodeCommand([
-              [gmake(_gclt.ZCOORD, clayer)],
-              [gmake(_gclt.XCOORD, this.coordinates_[ti].X), gmake(_gclt.YCOORD, this.coordinates_[ti].Y)]], _gcct.RAPID);
+              [gmake(_gclt.ZCOORD, clayer), gmake(_gclt.FEEDRATE, this.cutspeed_)],
+              [gmake(_gclt.XCOORD, this.coordinates_[crd].X), gmake(_gclt.YCOORD, this.coordinates_[crd].Y)]], _gcct.FEED);
           }
           else
           {
-            debug(3) mixin(test.wtest!`!0`);
-            tgcoms ~= new GCodeCommand([
-              [gmake(_gclt.FEEDRATE, this.cutspeed_)],
-              [gmake(_gclt.XCOORD, this.coordinates_[ti].X), gmake(_gclt.YCOORD, this.coordinates_[ti].Y)]
-            ], _gcct.FEED);
+            debug(2) mixin(test.wtest!`!0`);
+//            tgcoms[lyr].AddArgument(gmake(_gclt.FEEDRATE, this.cutspeed_));
+            tgcoms[lyr].AddArgument([gmake(_gclt.XCOORD, this.coordinates_[crd].X), gmake(_gclt.YCOORD, this.coordinates_[crd].Y)]);
           }
-          debug(3) writeln();
+          debug(2) writeln();
         }
       }
       foreach(GCodeCommand gcc; tgcoms)
@@ -681,24 +680,25 @@ unittest
 {
   mixin(test.testsay!"Outline tests");
   OutLine lshape = new OutLine();
+  lshape.cutspeed = 30f;
   lshape.cutmethod = CutMethod.LAYER;
   lshape.cutlayers = [-0.1f,-0.2f,-0.3f,-0.4f,-0.51f];
   mixin(test.dotest!`lshape.cutlayers`);
   lshape.AddCoordinate(Coordinate(0f,0f));
-  lshape.AddCoordinate(Coordinate([5f,0f]));
+  lshape.AddCoordinate(Coordinate(5f,0f));
   lshape.AddCoordinate(Coordinate(5f,1f));
   lshape.AddCoordinate(Coordinate(1f,1f));
   lshape.AddCoordinate(Coordinate(1f,5f));
   lshape.AddCoordinate(Coordinate(0f,5f));
   lshape.AddCoordinate(Coordinate(0f,0f));
   mixin(test.dotest!"lshape.GenerateGCode()");
-  
+  // WOW! THIS IS VERY VERY GOOD
   
   // lshape.AddLine(new Line([0f, 0f] , [5f,0f]);
 }
 
 /// holds a whole lotta(' shakin going on) DGObjects
-class Document
+@disable class Document
 {
 private:
   DGObject[] dgobjects_;

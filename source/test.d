@@ -3,8 +3,8 @@
 module test;
 //import std.stdio;
 
-version(unittest)
-{
+//version(unittest)
+//{
 
   int x(){return -3;}
   public import std.stdio, std.conv, std.exception, std.traits;
@@ -50,7 +50,7 @@ version(unittest)
     mixin(testsay!"HOLA");
     mixin(dotest!`x()`);
   }
-}
+//}
 version(testmain) 
 {
   void main()
