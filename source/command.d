@@ -4,10 +4,24 @@ import std.conv;
 version(unittest)
 {
   import test;
+  import std.stdio;
+  public enum usedebug = 1;
+  debug = 2;
 }
 
-version(noconfig) {enum NOCONFIG =  true;}
-else              {enum NOCONFIG =  false;}
+debug(1) import std.stdio;
+
+unittest
+{  
+  writeln("unittests enabled");
+  string dbgstring;
+  debug(2) dbgstring = "debug enabled";
+  writeln(dbgstring);
+}
+
+
+version(noconfig) {enum NOCONFIG =  true  ;}
+else              {enum NOCONFIG =  false ;}
 
 static if(!NOCONFIG) 
 {
@@ -35,7 +49,7 @@ deprecated enum CommandType
 /// the Type of object
 enum DGType
 {
-  HOLE,
+  HOLE = 1,
   LINE,
   OUTLINE  
 }
@@ -44,7 +58,7 @@ enum DGType
 /// $(RED only use layer for now)
 enum CutMethod
 {
-  LIGHTNING,
+  LIGHTNING = 1,
   ZIGZAG,
   LAYER
 }
@@ -59,7 +73,7 @@ deprecated enum OffsetSide
 /// GCodeLetterType what kinda letter is it?
 enum GCodeLetterType
 {
-  FEEDRATE,
+  FEEDRATE = 1,
   XCOORD,
   YCOORD,
   ZCOORD,
@@ -69,7 +83,7 @@ enum GCodeLetterType
 /// GCodeCommandType what kinda command is it?
 enum GCodeCommandType
 {
-  RAPID,
+  RAPID = 1,
   FEED,
   OFFSET_RIGHT,
   OFFSET_LEFT
@@ -179,6 +193,7 @@ public:
   this(GCodeArgument[][] argsin, GCodeCommandType comin)
   {
     this.arguments_ = argsin.dup;
+    this.comtype_ = comin;
   }
   
   /// return the array of arrays of arguments
@@ -536,21 +551,37 @@ unittest
 class OutLine : DGObject
 {
 protected:
-  Coordinate[] coordinates_;
-  deprecated Line[] outlines_;
-  CutMethod cut_method_;
+  Coordinate[] coordinates_; /// big list of coordinates
+  
+  float cutheight_; /// height to cut at $(RED unnecessary with cutlayers_? Could just be cutlayers_[0])
+  float[] cutlayers_; /// the ZCoord layers to decrement by
+  float hoverheight_; /// the height to hover at when moving
+  CutMethod cut_method_; /// which cutmethod to use
   float tool_radius_;
-  version(nonconfig) {int ds = 3;}
-  bool use_offset_;
+  float cutspeed_;
+  
+  deprecated bool use_offset_;
+  deprecated Line[] outlines_;
   deprecated OffsetSide side_to_use_;
 
 public:
 
   deprecated @property void offsetside(OffsetSide x) {this.side_to_use_=x;}
-  deprecated @property OffsetSide  offsetside() {return this.side_to_use_;}
+  deprecated @property OffsetSide offsetside() {return this.side_to_use_;}
 
   version (disable) {@property Line[] lines() {return this.outlines_;}}
   
+  @property CutMethod cutmethod() {return this.cut_method_;}
+  @property void cutmethod(CutMethod cmin) {this.cut_method_ = cmin;}
+  
+  @property float cutspeed() {return this.cutspeed_;}
+  @property void cutspeed(float cmin) {this.cutspeed_ = cmin;}
+  
+  @property float[] cutlayers() {return this.cutlayers_;}
+  @property void cutlayers (float[] inlyr) {this.cutlayers_ = inlyr;}
+  
+  @property float hoverheight(){return this.hoverheight_;}
+  @property void hoverheight(float inht){this.hoverheight_ = inht;}
   /// return the coordinates
   @property Coordinate[] coordinates() {return this.coordinates_;}
   
@@ -575,26 +606,45 @@ public:
   /// This is really logic heavy, mind you
   override string GenerateGCode()
   {
+    assert(cutspeed_ != float.nan, "want cutspeed");
+    assert(cutlayers_.length != 0, "want cutlayers");
+    assert(cut_method_ != 0 && cut_method_ == CutMethod.LAYER, "want cut method");
     string gcode;
     
     if(this.cut_method_ == CutMethod.LAYER)
     {
       GCodeCommand[] tgcoms;
-      for(uint ti = 0; ti < this.coordinates_.length; ti++)
+      debug(2) mixin(test.dotest!`this.coordinates_.length`);
+      debug(2) mixin(test.dotest!`this.cutlayers_.length`);
+      for(ubyte li = 0; li < this.cutlayers_.length; li++)
       {
-        if(ti == 0)
+        float clayer = this.cutlayers_[li];
+        for(uint ti = 0; ti < this.coordinates_.length; ti++)
         {
-          tgcoms ~= new GCodeCommand([
-            [gmake(_gclt.ZCOORD, defhoverheight)],
-            [gmake(_gclt.XCOORD, this.coordinates_[ti].X), gmake(_gclt.YCOORD, this.coordinates_[ti].Y)]], _gcct.RAPID);
-        }
-        else
-        {
-//          tgcoms ~= GCodeCommand([
-//            [gmake(_gclt
+          debug(3) mixin(test.dotest!(`li`, false));
+          debug(3) mixin(test.dotest!(`ti`, false));
+          if(ti == 0)
+          {
+            debug(3) mixin(test.wtest!`0`);
+            tgcoms ~= new GCodeCommand([
+              [gmake(_gclt.ZCOORD, clayer)],
+              [gmake(_gclt.XCOORD, this.coordinates_[ti].X), gmake(_gclt.YCOORD, this.coordinates_[ti].Y)]], _gcct.RAPID);
+          }
+          else
+          {
+            debug(3) mixin(test.wtest!`!0`);
+            tgcoms ~= new GCodeCommand([
+              [gmake(_gclt.FEEDRATE, this.cutspeed_)],
+              [gmake(_gclt.XCOORD, this.coordinates_[ti].X), gmake(_gclt.YCOORD, this.coordinates_[ti].Y)]
+            ], _gcct.FEED);
+          }
+          debug(3) writeln();
         }
       }
-    
+      foreach(GCodeCommand gcc; tgcoms)
+      {
+        gcode ~= gcc.GenerateGCode();
+      }
     }
     
     return gcode;
@@ -629,9 +679,20 @@ public:
 
 unittest
 {
+  mixin(test.testsay!"Outline tests");
   OutLine lshape = new OutLine();
+  lshape.cutmethod = CutMethod.LAYER;
+  lshape.cutlayers = [-0.1f,-0.2f,-0.3f,-0.4f,-0.51f];
+  mixin(test.dotest!`lshape.cutlayers`);
   lshape.AddCoordinate(Coordinate(0f,0f));
-  lshape.AddCoordinate(Coordinate([5f,5f]));
+  lshape.AddCoordinate(Coordinate([5f,0f]));
+  lshape.AddCoordinate(Coordinate(5f,1f));
+  lshape.AddCoordinate(Coordinate(1f,1f));
+  lshape.AddCoordinate(Coordinate(1f,5f));
+  lshape.AddCoordinate(Coordinate(0f,5f));
+  lshape.AddCoordinate(Coordinate(0f,0f));
+  mixin(test.dotest!"lshape.GenerateGCode()");
+  
   
   // lshape.AddLine(new Line([0f, 0f] , [5f,0f]);
 }
