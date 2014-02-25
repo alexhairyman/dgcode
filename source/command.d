@@ -607,7 +607,7 @@ public:
   /// This is really logic heavy, mind you
   override string GenerateGCode()
   {
-    assert(cutspeed_ != float.nan, "want cutspeed");
+    assert(!(cutspeed_ != cutspeed_), "want cutspeed");
     assert(cutlayers_.length != 0, "want cutlayers");
     assert(cut_method_ != 0 && cut_method_ == CutMethod.LAYER, "want cut method");
     string gcode;
@@ -691,6 +691,7 @@ unittest
   lshape.AddCoordinate(Coordinate(1f,5f));
   lshape.AddCoordinate(Coordinate(0f,5f));
   lshape.AddCoordinate(Coordinate(0f,0f));
+  lshape.cutspeed = 36f;
   mixin(test.dotest!"lshape.GenerateGCode()");
   // WOW! THIS IS VERY VERY GOOD
   
